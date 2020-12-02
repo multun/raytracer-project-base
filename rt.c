@@ -31,6 +31,8 @@ struct camera
     size_t height;
 
     double pixel_size;
+
+    double fov; // angle in radians
 };
 
 void camera_cast_ray(struct ray *ray, const struct camera *camera, size_t x,
@@ -51,7 +53,15 @@ void camera_cast_ray(struct ray *ray, const struct camera *camera, size_t x,
     struct vec3 offset = vec3_add(&right_offset, &up_offset);
     // ray->source = center + offset
     ray->source = vec3_add(&camera->center, &offset);
-    ray->direction = camera->forward;
+
+    double focal_distance = ((double)camera->width / 2) * camera->pixel_size
+                            / tan(camera->fov / 2);
+    struct vec3 vantage_point_offset
+        = vec3_mul(&camera->forward, -focal_distance);
+    struct vec3 vantage_point
+        = vec3_add(&vantage_point_offset, &camera->center);
+    ray->direction = vec3_sub(&ray->source, &vantage_point);
+    vec3_normalize(&ray->direction);
 }
 
 bool sphere_ray_intersect(const struct ray *ray, const struct sphere *sphere)
@@ -86,6 +96,8 @@ int main(int argc, char *argv[])
         .pixel_size = 0.1,
         .width = image->width,
         .height = image->height,
+        // convert to radians
+        .fov = 80 /* degrees */ * M_PI / (360 / 2),
     };
 
     for (size_t y = 0; y < image->height; y++)
