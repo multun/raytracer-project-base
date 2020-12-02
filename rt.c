@@ -64,15 +64,59 @@ void camera_cast_ray(struct ray *ray, const struct camera *camera, size_t x,
     vec3_normalize(&ray->direction);
 }
 
-bool sphere_ray_intersect(const struct ray *ray, const struct sphere *sphere)
+struct intersection
+{
+    struct vec3 point;
+    struct vec3 normal;
+};
+
+bool sphere_ray_intersect(struct intersection *intersection,
+                          const struct ray *ray, const struct sphere *sphere)
 {
     struct vec3 hypothenuse = vec3_sub(&sphere->center, &ray->source);
     double hyp_len = vec3_length(&hypothenuse);
     double projection = vec3_dot(&hypothenuse, &ray->direction);
-    double d = sqrt(hyp_len * hyp_len - projection * projection);
+    if (projection < 0)
+        return false;
 
-    bool has_intersection = d <= sphere->radius;
-    return has_intersection;
+    double d = sqrt(hyp_len * hyp_len - projection * projection);
+    if (d > sphere->radius)
+        return false;
+
+    double radius = sphere->radius;
+    double m = sqrt(radius * radius - d * d);
+    double t0 = projection - m;
+    double t1 = projection + m;
+
+    double t = t0;
+    if (t < 0.)
+        t = t1;
+
+    // intersection point = ray->source + ray->direction * t
+    struct vec3 point_offset = vec3_mul(&ray->direction, t);
+    intersection->point = vec3_add(&ray->source, &point_offset);
+    intersection->normal = vec3_sub(&intersection->point, &sphere->center);
+    vec3_normalize(&intersection->normal);
+    // compute intersection coord / normal
+    return true;
+}
+
+struct rgb_pixel normal_color(const struct vec3 *normal)
+{
+    struct rgb_pixel res;
+    //       -1 => 1
+    // + 1   0 => 2
+    // / 2   0 => 1
+    // * 255 0 => 255
+    //       0 => 255
+
+    double nx = (normal->x + 1.) / 2.;
+    double ny = (normal->y + 1.) / 2.;
+    double nz = (normal->z + 1.) / 2.;
+    res.r = nx * 255;
+    res.g = ny * 255;
+    res.b = nz * 255;
+    return res;
 }
 
 int main(int argc, char *argv[])
@@ -106,13 +150,13 @@ int main(int argc, char *argv[])
             struct ray ray;
             camera_cast_ray(&ray, &camera, x, y);
 
+            struct intersection intersection;
             // if there's no intersection between the ray and this object, skip
-            // it
-            if (!sphere_ray_intersect(&ray, &sphere))
+            if (!(sphere_ray_intersect(&intersection, &ray, &sphere)))
                 continue;
 
-            struct rgb_pixel white = {255, 255, 255};
-            rgb_image_set(image, x, y, white);
+            struct rgb_pixel pixel_color = normal_color(&intersection.normal);
+            rgb_image_set(image, x, y, pixel_color);
         }
 
     FILE *fp = fopen(argv[1], "w");
