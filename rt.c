@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
     if (argc != 2)
         errx(1, "Usage: OUTPUT.bmp");
 
-    struct rgb_image *image = rgb_image_alloc(100, 100);
+    struct rgb_image *image = rgb_image_alloc(1920, 1080);
     struct rgb_pixel bg_color = {0};
     rgb_image_clear(image, &bg_color);
 
