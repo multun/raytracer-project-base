@@ -96,18 +96,19 @@ struct intersection
     struct vec3 normal;
 };
 
-bool sphere_ray_intersect(struct intersection *intersection,
-                          const struct ray *ray, const struct sphere *sphere)
+// returns the intersection distance
+double sphere_ray_intersect(struct intersection *intersection,
+                            const struct ray *ray, const struct sphere *sphere)
 {
     struct vec3 hypothenuse = vec3_sub(&sphere->center, &ray->source);
     double hyp_len = vec3_length(&hypothenuse);
     double projection = vec3_dot(&hypothenuse, &ray->direction);
     if (projection < 0)
-        return false;
+        return INFINITY;
 
     double d = sqrt(hyp_len * hyp_len - projection * projection);
     if (d > sphere->radius)
-        return false;
+        return INFINITY;
 
     double radius = sphere->radius;
     double m = sqrt(radius * radius - d * d);
@@ -124,7 +125,7 @@ bool sphere_ray_intersect(struct intersection *intersection,
     intersection->normal = vec3_sub(&intersection->point, &sphere->center);
     vec3_normalize(&intersection->normal);
     // compute intersection coord / normal
-    return true;
+    return t;
 }
 
 struct rgb_pixel normal_color(const struct vec3 *normal)
@@ -154,9 +155,15 @@ int main(int argc, char *argv[])
     struct rgb_pixel bg_color = {0};
     rgb_image_clear(image, &bg_color);
 
-    struct sphere sphere = {
-        .center = {0, 10, 0},
-        .radius = 4,
+    struct sphere spheres[] = {
+        {
+            .center = {-1, 10, 0},
+            .radius = 2,
+        },
+        {
+            .center = {1, 10.5, 0},
+            .radius = 2,
+        },
     };
 
     double cam_width = 10;
@@ -181,12 +188,29 @@ int main(int argc, char *argv[])
 
             camera_cast_ray(&ray, &camera, cam_x, cam_y);
 
-            struct intersection intersection;
-            // if there's no intersection between the ray and this object, skip
-            if (!(sphere_ray_intersect(&intersection, &ray, &sphere)))
+            struct intersection best_intersection;
+            double best_intersection_dist = INFINITY;
+
+            for (size_t i = 0; i < sizeof(spheres) / sizeof(spheres[0]); i++)
+            {
+                struct intersection intersection;
+                // if there's no intersection between the ray and this object,
+                // skip
+                double intersection_dist
+                    = sphere_ray_intersect(&intersection, &ray, &spheres[i]);
+                if (intersection_dist >= best_intersection_dist)
+                    continue;
+
+                best_intersection_dist = intersection_dist;
+                best_intersection = intersection;
+            }
+
+            // if the intersection distance is infinite, do not shade the pixel
+            if (isinf(best_intersection_dist))
                 continue;
 
-            struct rgb_pixel pixel_color = normal_color(&intersection.normal);
+            struct rgb_pixel pixel_color
+                = normal_color(&best_intersection.normal);
             rgb_image_set(image, x, y, pixel_color);
         }
 
