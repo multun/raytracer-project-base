@@ -27,24 +27,52 @@ struct camera
     struct vec3 forward;
     struct vec3 up;
 
-    size_t width;
-    size_t height;
+    double width;
+    double height;
 
-    double pixel_size;
-
-    double fov; // angle in radians
+    double focal_distance;
 };
 
-void camera_cast_ray(struct ray *ray, const struct camera *camera, size_t x,
-                     size_t y)
+double focal_distance_from_fov(double width, double fov_deg)
 {
+    // convert from degrees to radians
+    double fov_rad = fov_deg * M_PI / (360 / 2);
+    return (width / 2) / tan(fov_rad / 2);
+}
+
+/*
+** The camera is a physical object in its own right, positioned in space just like
+** any other. When casting a ray, the raytracer must express the coordinates of the
+** starting point of the ray, relative to the image plane defined by the camera.
+**
+** One way to do it is to define the bottom left corner of the image plane to be at
+** (-0.5, 0.5), its center to be at (0, 0), and its top right corner to be at (0.5,
+** 0.5).
+**
+** This way, the camera doesn't have to know about the dimensions of the output
+** image: it just traces rays where asked to.
+**
+**  (x=-0.5, y=0.5)                (x=0.5, y=0.5)
+**        +------------------------------+
+**        |                              |
+**        |              ^ y             |
+**        |              |               |
+**        |              +---> x         |
+**        |            center            |
+**        |                              |
+**        |                              |
+**        +------------------------------+
+** (x=-0.5, y=-0.5)                (x=0.5, y=-0.5)
+*/
+void camera_cast_ray(struct ray *ray, const struct camera *camera, double cam_x,
+                     double cam_y)
+{
+    // translate relative position inside the image plane
+    // into absolute position into the image plane.
+    double x_coeff = cam_x * camera->width;
+    double y_coeff = cam_y * camera->height;
+
     struct vec3 right = vec3_cross(&camera->forward, &camera->up);
-    // x_coeff = (x - width / 2) * pixel_size
-    double x_coeff
-        = ((double)x - (double)camera->width / 2) * camera->pixel_size;
-    // y_coeff = (y - height / 2) * pixel_size
-    double y_coeff
-        = ((double)y - (double)camera->height / 2) * camera->pixel_size;
     // right_offset = right * x_coeff
     struct vec3 right_offset = vec3_mul(&right, x_coeff);
     // up_offset = up * y_coeff
@@ -54,10 +82,8 @@ void camera_cast_ray(struct ray *ray, const struct camera *camera, size_t x,
     // ray->source = center + offset
     ray->source = vec3_add(&camera->center, &offset);
 
-    double focal_distance = ((double)camera->width / 2) * camera->pixel_size
-                            / tan(camera->fov / 2);
     struct vec3 vantage_point_offset
-        = vec3_mul(&camera->forward, -focal_distance);
+        = vec3_mul(&camera->forward, -camera->focal_distance);
     struct vec3 vantage_point
         = vec3_add(&vantage_point_offset, &camera->center);
     ray->direction = vec3_sub(&ray->source, &vantage_point);
@@ -133,22 +159,27 @@ int main(int argc, char *argv[])
         .radius = 4,
     };
 
+    double cam_width = 10;
+    double cam_height = cam_width * image->height / image->width;
+
     struct camera camera = {
         .center = {0, 0, 0},
         .forward = {0, 1, 0},
         .up = {0, 0, 1},
-        .pixel_size = 0.1,
-        .width = image->width,
-        .height = image->height,
-        // convert to radians
-        .fov = 80 /* degrees */ * M_PI / (360 / 2),
+        .width = cam_width,
+        .height = cam_height,
+        .focal_distance = focal_distance_from_fov(cam_width, 80),
     };
 
     for (size_t y = 0; y < image->height; y++)
         for (size_t x = 0; x < image->width; x++)
         {
             struct ray ray;
-            camera_cast_ray(&ray, &camera, x, y);
+
+            double cam_x = ((double)x / image->width) - 0.5;
+            double cam_y = ((double)y / image->height) - 0.5;
+
+            camera_cast_ray(&ray, &camera, cam_x, cam_y);
 
             struct intersection intersection;
             // if there's no intersection between the ray and this object, skip
