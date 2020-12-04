@@ -283,8 +283,13 @@ int main(int argc, char *argv[])
                 specular_contribution = vec3_mul(&light_color, spec_coeff);
             }
 
-            struct vec3 pix_color
-                = vec3_add(&diffuse_contribution, &specular_contribution);
+            double ambient_intensity = 0.05;
+            struct vec3 ambient_contribution = vec3_mul(&surface_color, ambient_intensity);
+
+            struct vec3 pix_color = {0};
+            pix_color = vec3_add(&pix_color, &ambient_contribution);
+            pix_color = vec3_add(&pix_color, &diffuse_contribution);
+            pix_color = vec3_add(&pix_color, &specular_contribution);
             rgb_image_set(image, x, y, rgb_color_from_light(&pix_color));
         }
 
