@@ -43,6 +43,16 @@ static inline struct vec3 vec3_mul(const struct vec3 *a, double c)
     };
 }
 
+static inline struct vec3 vec3_mul_vec(const struct vec3 *a,
+                                       const struct vec3 *b)
+{
+    return (struct vec3){
+        .x = a->x * b->x,
+        .y = a->y * b->y,
+        .z = a->z * b->z,
+    };
+}
+
 static inline double vec3_length(const struct vec3 *v)
 {
     return sqrt(v->x * v->x + v->y * v->y + v->z * v->z);

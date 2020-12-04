@@ -146,6 +146,35 @@ struct rgb_pixel normal_color(const struct vec3 *normal)
     return res;
 }
 
+/*
+** The color of a light is encoded inside a float, from 0 to +inf,
+** where 0 is no light, and +inf a lot more light. Unfortunately,
+** regular images can't hold such a huge range, and each color channel
+** is usualy limited to [0,255]. This function does the (lossy) translation
+** by mapping the float [0,1] range to [0,255]
+*/
+static inline uint8_t translate_light_component(double light_comp)
+{
+    if (light_comp < 0.)
+        light_comp = 0.;
+    if (light_comp > 1.)
+        light_comp = 1.;
+
+    return light_comp * 255;
+}
+
+/*
+** Converts an rgb floating point light color to 24 bit rgb.
+*/
+struct rgb_pixel rgb_color_from_light(const struct vec3 *light)
+{
+    struct rgb_pixel res;
+    res.r = translate_light_component(light->x);
+    res.g = translate_light_component(light->y);
+    res.b = translate_light_component(light->z);
+    return res;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)
@@ -178,6 +207,12 @@ int main(int argc, char *argv[])
         .focal_distance = focal_distance_from_fov(cam_width, 80),
     };
 
+    struct vec3 light_color = {1, 1, 0}; // yellow
+    struct vec3 light_direction = {1, -1, -1};
+    double light_intensity = 5;
+
+    vec3_normalize(&light_direction);
+
     for (size_t y = 0; y < image->height; y++)
         for (size_t x = 0; x < image->width; x++)
         {
@@ -209,9 +244,26 @@ int main(int argc, char *argv[])
             if (isinf(best_intersection_dist))
                 continue;
 
-            struct rgb_pixel pixel_color
-                = normal_color(&best_intersection.normal);
-            rgb_image_set(image, x, y, pixel_color);
+            // a coefficient teaking how much diffuse light to add
+            double diffuse_kn = 0.20;
+            struct vec3 surface_color = {0.75, 0.125, 0.125};
+
+            struct vec3 light = vec3_mul(&light_color, light_intensity);
+            struct vec3 diffuse_light_color
+                = vec3_mul_vec(&light, &surface_color);
+
+            // compute the diffuse lighting contribution by applying the cosine
+            // law
+            double diffuse_intensity
+                = vec3_dot(&best_intersection.normal, &light_direction);
+            if (diffuse_intensity < 0)
+                diffuse_intensity = 0;
+
+            struct vec3 diffuse_contribution
+                = vec3_mul(&diffuse_light_color, diffuse_intensity * diffuse_kn);
+
+            struct vec3 pix_color = diffuse_contribution;
+            rgb_image_set(image, x, y, rgb_color_from_light(&pix_color));
         }
 
     FILE *fp = fopen(argv[1], "w");
