@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
                 specular_contribution = vec3_mul(&light_color, spec_coeff);
             }
 
-            double ambient_intensity = 0.05;
+            double ambient_intensity = 0.1;
             struct vec3 ambient_contribution = vec3_mul(&surface_color, ambient_intensity);
 
             struct vec3 pix_color = {0};
