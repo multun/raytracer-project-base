@@ -77,6 +77,17 @@ static inline struct vec3 vec3_cross(const struct vec3 *a, const struct vec3 *b)
                          a->x * b->y - b->x * a->y};
 }
 
+/*
+** Computes the reflection of a vector, given the normal of a surface
+*/
+static inline struct vec3 vec3_reflect(const struct vec3 *incident_dir,
+                                       const struct vec3 *normal)
+{
+    double correction_coeff = -2 * vec3_dot(incident_dir, normal);
+    struct vec3 corrector = vec3_mul(normal, correction_coeff);
+    return vec3_add(incident_dir, &corrector);
+}
+
 static inline void vec3_update_min_components(struct vec3 *self,
                                               const struct vec3 *o)
 {

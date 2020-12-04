@@ -262,7 +262,33 @@ int main(int argc, char *argv[])
             struct vec3 diffuse_contribution
                 = vec3_mul(&diffuse_light_color, diffuse_intensity * diffuse_kn);
 
-            struct vec3 pix_color = diffuse_contribution;
+            // compute the specular reflection contribution
+
+            // these two should be material specific, but aren't to keep
+            // things simple
+            // how wide the reflection is
+            double spec_n = 10;
+            // how much the specular reflection contributes
+            double spec_ks = 0.20;
+
+            struct vec3 light_reflection_dir
+                = vec3_reflect(&light_direction, &best_intersection.normal);
+            struct vec3 specular_contribution = {0};
+            // computes how much the reflection goes in the direction of the
+            // camera
+            double light_reflection_proj
+                = vec3_dot(&light_reflection_dir, &ray.direction);
+            if (light_reflection_proj < 0.0)
+                light_reflection_proj = 0.0;
+            else
+            {
+                double spec_coeff
+                    = pow(light_reflection_proj, spec_n) * spec_ks;
+                specular_contribution = vec3_mul(&light_color, spec_coeff);
+            }
+
+            struct vec3 pix_color
+                = vec3_add(&diffuse_contribution, &specular_contribution);
             rgb_image_set(image, x, y, rgb_color_from_light(&pix_color));
         }
 
