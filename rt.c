@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
     };
 
     struct vec3 light_color = {1, 1, 0}; // yellow
-    struct vec3 light_direction = {1, -1, -1};
+    struct vec3 light_direction = {-1, 1, 1};
     double light_intensity = 5;
 
     vec3_normalize(&light_direction);
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
             // compute the diffuse lighting contribution by applying the cosine
             // law
             double diffuse_intensity
-                = vec3_dot(&best_intersection.normal, &light_direction);
+                = -vec3_dot(&best_intersection.normal, &light_direction);
             if (diffuse_intensity < 0)
                 diffuse_intensity = 0;
 
@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
             // computes how much the reflection goes in the direction of the
             // camera
             double light_reflection_proj
-                = vec3_dot(&light_reflection_dir, &ray.direction);
+                = -vec3_dot(&light_reflection_dir, &ray.direction);
             if (light_reflection_proj < 0.0)
                 light_reflection_proj = 0.0;
             else
