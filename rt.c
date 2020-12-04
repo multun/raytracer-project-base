@@ -186,12 +186,8 @@ int main(int argc, char *argv[])
 
     struct sphere spheres[] = {
         {
-            .center = {-1, 10, 0},
-            .radius = 2,
-        },
-        {
-            .center = {1, 10.5, 0},
-            .radius = 2,
+            .center = {0, 10, 0},
+            .radius = 4,
         },
     };
 
