@@ -46,3 +46,10 @@ double object_sphere_ray_intersect(struct object_intersection *inter,
     inter->material = sphere->material;
     return inter_dis;
 }
+
+void sphere_free(struct object *obj)
+{
+    struct sphere *sphere = (struct sphere *)obj;
+    material_put(sphere->material);
+    free(sphere);
+}

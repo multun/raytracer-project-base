@@ -66,8 +66,6 @@ struct rgb_pixel rgb_color_from_light(const struct vec3 *light)
 
 static void build_test_scene(struct scene *scene, double aspect_ratio)
 {
-    scene_init(scene);
-
     // create a sample red material
     struct phong_material *red_material = zalloc(sizeof(*red_material));
     phong_material_init(red_material);
@@ -78,11 +76,8 @@ static void build_test_scene(struct scene *scene, double aspect_ratio)
     red_material->ambient_intensity = 0.1;
 
     // create a single sphere with the above material, and add it to the scene
-    struct sphere *sample_sphere = zalloc(sizeof(*sample_sphere));
-    sphere_init(sample_sphere);
-    sample_sphere->center = (struct vec3){0, 10, 0};
-    sample_sphere->radius = 4;
-    sample_sphere->material = &red_material->base;
+    struct sphere *sample_sphere
+        = sphere_create((struct vec3){0, 10, 0}, 4, &red_material->base);
     object_vect_push(&scene->objects, &sample_sphere->base);
 
     // setup the scene lighting
@@ -103,8 +98,10 @@ static void build_test_scene(struct scene *scene, double aspect_ratio)
         .height = cam_height,
         .focal_distance = focal_distance_from_fov(cam_width, 80),
     };
-}
 
+    // release the reference to the material
+    material_put(&red_material->base);
+}
 
 int main(int argc, char *argv[])
 {
@@ -124,6 +121,7 @@ int main(int argc, char *argv[])
 
     // build the scene
     struct scene scene;
+    scene_init(&scene);
     build_test_scene(&scene, aspect_ratio);
 
     // for all the pixels of the image, try to find the closest object intersecting
@@ -173,6 +171,9 @@ int main(int argc, char *argv[])
     rc = bmp_write(image, ppm_from_ppi(80), fp);
 
     fclose(fp);
+
+    scene_destroy(&scene);
+
     free(image);
 
     return rc;

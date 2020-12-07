@@ -36,3 +36,5 @@ static inline void scene_init(struct scene *scene)
 {
     object_vect_init(&scene->objects, 42);
 }
+
+void scene_destroy(struct scene *scene);

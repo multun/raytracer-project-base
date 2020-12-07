@@ -3,6 +3,8 @@
 #include "vec3.h"
 #include "object.h"
 
+#include <stddef.h>
+
 struct phong_material
 {
     // the base class structure
@@ -28,5 +30,5 @@ struct vec3 phong_metarial_shade(const struct material *material,
 
 static inline void phong_material_init(struct phong_material *mat)
 {
-    mat->base.shade = phong_metarial_shade;
+    material_init(&mat->base, NULL, phong_metarial_shade);
 }
