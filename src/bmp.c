@@ -1,6 +1,8 @@
 #include "bmp.h"
 #include "image.h"
-#include "utils.h"
+#include "utils/align.h"
+#include "utils/alloc.h"
+#include "utils/static_assert.h"
 
 #include <stdint.h>
 

@@ -1,0 +1,28 @@
+#include "utils/alloc.h"
+#include <stdlib.h>
+
+void GVECT_FNAME(init)(struct GVECT_NAME *vect, size_t capacity)
+{
+    vect->size = 0;
+    vect->capacity = capacity;
+    vect->data = xalloc(capacity * sizeof(GVECT_TYPE));
+}
+
+void GVECT_FNAME(destroy)(struct GVECT_NAME *vect)
+{
+    free(vect->data);
+}
+
+void GVECT_FNAME(push)(struct GVECT_NAME *vect, GVECT_TYPE c)
+{
+    if (vect->size == vect->capacity) {
+        vect->capacity = 2 * vect->capacity + 1; // TODO: check for overflow
+        vect->data = xrealloc(vect->data, vect->capacity * sizeof(GVECT_TYPE));
+    }
+    vect->data[vect->size++] = c;
+}
+
+GVECT_TYPE GVECT_FNAME(pop)(struct GVECT_NAME *vect)
+{
+    return vect->data[--vect->size];
+}
