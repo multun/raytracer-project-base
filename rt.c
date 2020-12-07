@@ -10,6 +10,8 @@
 #include "vec3.h"
 #include "camera.h"
 #include "scene.h"
+#include "sphere.h"
+#include "phong_material.h"
 
 
 struct rgb_pixel normal_color(const struct vec3 *normal)
@@ -62,22 +64,38 @@ struct rgb_pixel rgb_color_from_light(const struct vec3 *light)
 }
 
 
-int main(int argc, char *argv[])
+static void build_test_scene(struct scene *scene, double aspect_ratio)
 {
-    if (argc != 2)
-        errx(1, "Usage: OUTPUT.bmp");
+    scene_init(scene);
 
-    struct rgb_image *image = rgb_image_alloc(1920, 1080);
-    struct rgb_pixel bg_color = {0};
-    rgb_image_clear(image, &bg_color);
+    // create a sample red material
+    struct phong_material *red_material = zalloc(sizeof(*red_material));
+    phong_material_init(red_material);
+    red_material->surface_color = (struct vec3){0.75, 0.125, 0.125};
+    red_material->diffuse_Kn = 0.2;
+    red_material->spec_n = 10;
+    red_material->spec_Ks = 0.2;
+    red_material->ambient_intensity = 0.1;
 
-    struct object_vect objects;
-    object_vect_init(&objects, 42);
+    // create a single sphere with the above material, and add it to the scene
+    struct sphere *sample_sphere = zalloc(sizeof(*sample_sphere));
+    sphere_init(sample_sphere);
+    sample_sphere->center = (struct vec3){0, 10, 0};
+    sample_sphere->radius = 4;
+    sample_sphere->material = &red_material->base;
+    object_vect_push(&scene->objects, &sample_sphere->base);
 
+    // setup the scene lighting
+    scene->light_intensity = 5;
+    scene->light_color = (struct vec3){1, 1, 0}; // yellow
+    scene->light_direction = (struct vec3){-1, 1, 1};
+    vec3_normalize(&scene->light_direction);
+
+    // setup the camera
     double cam_width = 10;
-    double cam_height = cam_width * image->height / image->width;
+    double cam_height = cam_width / aspect_ratio;
 
-    struct camera camera = {
+    scene->camera = (struct camera){
         .center = {0, 0, 0},
         .forward = {0, 1, 0},
         .up = {0, 0, 1},
@@ -85,94 +103,66 @@ int main(int argc, char *argv[])
         .height = cam_height,
         .focal_distance = focal_distance_from_fov(cam_width, 80),
     };
+}
 
-    struct vec3 light_color = {1, 1, 0}; // yellow
-    struct vec3 light_direction = {-1, 1, 1};
-    double light_intensity = 5;
 
-    vec3_normalize(&light_direction);
+int main(int argc, char *argv[])
+{
+    int rc;
 
+    if (argc != 2)
+        errx(1, "Usage: OUTPUT.bmp");
+
+    // initialize the frame buffer (the buffer that will store the result of the rendering)
+    struct rgb_image *image = rgb_image_alloc(1920, 1080);
+
+    // set all the pixels of the image to black
+    struct rgb_pixel bg_color = {0};
+    rgb_image_clear(image, &bg_color);
+
+    double aspect_ratio = (double)image->width / image->height;
+
+    // build the scene
+    struct scene scene;
+    build_test_scene(&scene, aspect_ratio);
+
+    // for all the pixels of the image, try to find the closest object intersecting
+    // the camera ray. If an object is found, shade the pixel to find its color.
     for (size_t y = 0; y < image->height; y++)
         for (size_t x = 0; x < image->width; x++)
         {
-            struct ray ray;
-
+            // find the position of the current pixel in the image plane
+            // camera_cast_ray takes camera relative positions, from -0.5 to 0.5 for both axis
             double cam_x = ((double)x / image->width) - 0.5;
             double cam_y = ((double)y / image->height) - 0.5;
 
-            camera_cast_ray(&ray, &camera, cam_x, cam_y);
+            // find the starting point and direction of this ray
+            struct ray ray;
+            camera_cast_ray(&ray, &scene.camera, cam_x, cam_y);
 
-            struct object_intersection best_intersection;
-            double best_intersection_dist = INFINITY;
+            // we will now try to find the closest object in the scene intersecting this ray
+            struct object_intersection closest_intersection;
+            double closest_intersection_dist = INFINITY;
 
-            for (size_t i = 0; i < object_vect_size(&objects); i++)
+            for (size_t i = 0; i < object_vect_size(&scene.objects); i++)
             {
-                struct object *obj = object_vect_get(&objects, i);
+                struct object *obj = object_vect_get(&scene.objects, i);
                 struct object_intersection intersection;
-                // if there's no intersection between the ray and this object,
-                // skip
+                // if there's no intersection between the ray and this object, skip it
                 double intersection_dist = obj->intersect(&intersection, obj, &ray);
-                if (intersection_dist >= best_intersection_dist)
+                if (intersection_dist >= closest_intersection_dist)
                     continue;
 
-                best_intersection_dist = intersection_dist;
-                best_intersection = intersection;
+                closest_intersection_dist = intersection_dist;
+                closest_intersection = intersection;
             }
 
             // if the intersection distance is infinite, do not shade the pixel
-            if (isinf(best_intersection_dist))
+            if (isinf(closest_intersection_dist))
                 continue;
 
-            // a coefficient teaking how much diffuse light to add
-            double diffuse_kn = 0.20;
-            struct vec3 surface_color = {0.75, 0.125, 0.125};
-
-            struct vec3 light = vec3_mul(&light_color, light_intensity);
-            struct vec3 diffuse_light_color
-                = vec3_mul_vec(&light, &surface_color);
-
-            // compute the diffuse lighting contribution by applying the cosine
-            // law
-            double diffuse_intensity
-                = -vec3_dot(&best_intersection.location.normal, &light_direction);
-            if (diffuse_intensity < 0)
-                diffuse_intensity = 0;
-
-            struct vec3 diffuse_contribution
-                = vec3_mul(&diffuse_light_color, diffuse_intensity * diffuse_kn);
-
-            // compute the specular reflection contribution
-
-            // these two should be material specific, but aren't to keep
-            // things simple
-            // how wide the reflection is
-            double spec_n = 10;
-            // how much the specular reflection contributes
-            double spec_ks = 0.20;
-
-            struct vec3 light_reflection_dir
-                = vec3_reflect(&light_direction, &best_intersection.location.normal);
-            struct vec3 specular_contribution = {0};
-            // computes how much the reflection goes in the direction of the
-            // camera
-            double light_reflection_proj
-                = -vec3_dot(&light_reflection_dir, &ray.direction);
-            if (light_reflection_proj < 0.0)
-                light_reflection_proj = 0.0;
-            else
-            {
-                double spec_coeff
-                    = pow(light_reflection_proj, spec_n) * spec_ks;
-                specular_contribution = vec3_mul(&light_color, spec_coeff);
-            }
-
-            double ambient_intensity = 0.1;
-            struct vec3 ambient_contribution = vec3_mul(&surface_color, ambient_intensity);
-
-            struct vec3 pix_color = {0};
-            pix_color = vec3_add(&pix_color, &ambient_contribution);
-            pix_color = vec3_add(&pix_color, &diffuse_contribution);
-            pix_color = vec3_add(&pix_color, &specular_contribution);
+            struct material *mat = closest_intersection.material;
+            struct vec3 pix_color = mat->shade(mat, &closest_intersection.location, &scene, &ray);
             rgb_image_set(image, x, y, rgb_color_from_light(&pix_color));
         }
 
@@ -180,5 +170,10 @@ int main(int argc, char *argv[])
     if (fp == NULL)
         err(1, "failed to open the output file");
 
-    return bmp_write(image, ppm_from_ppi(80), fp);
+    rc = bmp_write(image, ppm_from_ppi(80), fp);
+
+    fclose(fp);
+    free(image);
+
+    return rc;
 }

@@ -1,5 +1,5 @@
 LDLIBS = -lm
-OBJS = rt.o src/bmp.o src/image.o src/camera.o src/utils/pvect.o src/utils/alloc.o
+OBJS = rt.o src/bmp.o src/image.o src/camera.o src/utils/pvect.o src/utils/alloc.o src/sphere.o src/phong.o
 BIN = rt
 
 CPPFLAGS = -D_GNU_SOURCE -iquote includes/

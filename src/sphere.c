@@ -2,8 +2,9 @@
 
 #include <stdlib.h>
 
-double sphere_ray_intersect(struct intersection *intersection,
-                            const struct ray *ray, const struct sphere *sphere)
+static double sphere_ray_intersect(struct intersection *intersection,
+                                   const struct sphere *sphere,
+                                   const struct ray *ray)
 {
     struct vec3 hypothenuse = vec3_sub(&sphere->center, &ray->source);
     double hyp_len = vec3_length(&hypothenuse);
