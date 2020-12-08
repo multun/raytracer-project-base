@@ -4,6 +4,11 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+void ref_nofree(struct refcnt *refcnt)
+{
+    (void)refcnt;
+}
+
 void ref_init(struct refcnt *refcnt, refcnt_free_f free)
 {
     assert(refcnt->count == 0);

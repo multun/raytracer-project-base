@@ -53,6 +53,8 @@ static inline void material_init(struct material *mat,
     mat->shade = mat_shader;
 }
 
+#define MATERIAL_STATIC_INIT(Shader) { .refcnt = REFCNT_STATIC_INIT, .shade = (Shader) }
+
 // increases the material reference counter
 static inline struct material *material_get(struct material *mat)
 {

@@ -22,6 +22,10 @@ struct refcnt
     refcnt_free_f free;
 };
 
+#define REFCNT_STATIC_INIT { .count = 1, .free = ref_nofree }
+
+void ref_nofree(struct refcnt *refcnt);
+
 void ref_init(struct refcnt *refcnt, refcnt_free_f free);
 void ref_get(struct refcnt *refcnt);
 void ref_put(struct refcnt *refcnt);

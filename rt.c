@@ -15,24 +15,6 @@
 #include "vec3.h"
 #include "obj_loader.h"
 
-struct rgb_pixel normal_color(const struct vec3 *normal)
-{
-    struct rgb_pixel res;
-    //       -1 => 1
-    // + 1   0 => 2
-    // / 2   0 => 1
-    // * 255 0 => 255
-    //       0 => 255
-
-    double nx = (normal->x + 1.) / 2.;
-    double ny = (normal->y + 1.) / 2.;
-    double nz = (normal->z + 1.) / 2.;
-    res.r = nx * 255;
-    res.g = ny * 255;
-    res.b = nz * 255;
-    return res;
-}
-
 /*
 ** The color of a light is encoded inside a float, from 0 to +inf,
 ** where 0 is no light, and +inf a lot more light. Unfortunately,
