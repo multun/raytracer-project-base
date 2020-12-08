@@ -2,6 +2,7 @@
 #include "utils/evect.h"
 #include "utils/alloc.h"
 #include "phong_material.h"
+#include "normal_material.h"
 #include "triangle.h"
 
 #include <libgen.h>
@@ -113,7 +114,7 @@ int load_obj(struct scene *scene, const char *filename)
     {
         struct phong_material *shape_material = zalloc(sizeof(*shape_material));
         phong_material_init(shape_material);
-        shape_material->diffuse_Kn = 1;
+        shape_material->diffuse_Kn = 0.2;
         shape_material->spec_n = 10;
         shape_material->spec_Ks = 0.2;
         shape_material->ambient_intensity = 0.1;

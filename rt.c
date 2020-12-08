@@ -46,57 +46,84 @@ struct rgb_pixel rgb_color_from_light(const struct vec3 *light)
 
 static void build_test_scene(struct scene *scene, double aspect_ratio)
 {
-    /* // create a sample red material */
-    /* struct phong_material *red_material = zalloc(sizeof(*red_material)); */
-    /* phong_material_init(red_material); */
-    /* red_material->surface_color = (struct vec3){0.75, 0.125, 0.125}; */
-    /* red_material->diffuse_Kn = 0.2; */
-    /* red_material->spec_n = 10; */
-    /* red_material->spec_Ks = 0.2; */
-    /* red_material->ambient_intensity = 0.1; */
+    // create a sample red material
+    struct phong_material *red_material = zalloc(sizeof(*red_material));
+    phong_material_init(red_material);
+    red_material->surface_color = (struct vec3){0.75, 0.125, 0.125};
+    red_material->diffuse_Kn = 0.2;
+    red_material->spec_n = 10;
+    red_material->spec_Ks = 0.2;
+    red_material->ambient_intensity = 0.1;
 
-    /* // create a single sphere with the above material, and add it to the scene */
-    /* struct sphere *sample_sphere */
-    /*     = sphere_create((struct vec3){0, 10, 0}, 4, &red_material->base); */
-    /* object_vect_push(&scene->objects, &sample_sphere->base); */
+    // create a single sphere with the above material, and add it to the scene
+    struct sphere *sample_sphere
+        = sphere_create((struct vec3){0, 10, 0}, 4, &red_material->base);
+    object_vect_push(&scene->objects, &sample_sphere->base);
 
-    /* // go the same with a triangle */
-    /* // points are listed counter-clockwise */
-    /* //     a */
-    /* //    /| */
-    /* //   / | */
-    /* //  b--c */
-    /* struct vec3 points[3] = { */
-    /*     {6, 10, 1}, // a */
-    /*     {5, 10, 0}, // b */
-    /*     {6, 10, 0}, // c */
-    /* }; */
+    // go the same with a triangle
+    // points are listed counter-clockwise
+    //     a
+    //    /|
+    //   / |
+    //  b--c
+    struct vec3 points[3] = {
+        {6, 10, 1}, // a
+        {5, 10, 0}, // b
+        {6, 10, 0}, // c
+    };
 
-    /* struct triangle *sample_triangle */
-    /*     = triangle_create(points, &red_material->base); */
-    /* object_vect_push(&scene->objects, &sample_triangle->base); */
+    struct triangle *sample_triangle
+        = triangle_create(points, &red_material->base);
+    object_vect_push(&scene->objects, &sample_triangle->base);
 
     // setup the scene lighting
     scene->light_intensity = 5;
     scene->light_color = (struct vec3){1, 1, 0}; // yellow
-    scene->light_direction = (struct vec3){-0.5, 0, -1};
+    scene->light_direction = (struct vec3){-1, 1, -1};
+    vec3_normalize(&scene->light_direction);
+
+    // setup the camera
+    double cam_width = 10;
+    double cam_height = cam_width / aspect_ratio;
+
+    scene->camera = (struct camera){
+        .center = {0, 0, 0},
+        .forward = {0, 1, 0},
+        .up = {0, 0, 1},
+        .width = cam_width,
+        .height = cam_height,
+        .focal_distance = focal_distance_from_fov(cam_width, 80),
+    };
+
+    // release the reference to the material
+    material_put(&red_material->base);
+}
+
+static void build_obj_scene(struct scene *scene, double aspect_ratio)
+{
+    // setup the scene lighting
+    scene->light_intensity = 5;
+    scene->light_color = (struct vec3){1, 1, 0}; // yellow
+    scene->light_direction = (struct vec3){-1, -1, -1};
     vec3_normalize(&scene->light_direction);
 
     // setup the camera
     double cam_width = 2;
     double cam_height = cam_width / aspect_ratio;
 
+    // for some reason the object points in the z axis,
+    // with its up on y
     scene->camera = (struct camera){
-        .center = {0, 0, 1},
-        .forward = {0, 0, -1},
+        .center = {0, 1, 2},
+        .forward = {0, -1, -2},
         .up = {0, 1, 0},
         .width = cam_width,
         .height = cam_height,
-        .focal_distance = focal_distance_from_fov(cam_width, 80),
+        .focal_distance = focal_distance_from_fov(cam_width, 40),
     };
 
-    /* // release the reference to the material */
-    /* material_put(&red_material->base); */
+    vec3_normalize(&scene->camera.forward);
+    vec3_normalize(&scene->camera.up);
 }
 
 /* For all the pixels of the image, try to find the closest object
@@ -138,6 +165,13 @@ static void render_pixel(struct rgb_image *image, struct scene *scene, size_t x,
     if (isinf(closest_intersection_dist))
         return;
 
+    assert(closest_intersection_dist > 0);
+
+    /* double depth_repr = 1/(closest_intersection_dist + 1); */
+    /* uint8_t depth_intensity = translate_light_component(depth_repr); */
+    /* struct rgb_pixel pix_color = {depth_intensity, depth_intensity, depth_intensity}; */
+    /* rgb_image_set(image, x, y, pix_color); */
+
     struct material *mat = closest_intersection.material;
     struct vec3 pix_color
         = mat->shade(mat, &closest_intersection.location, scene, &ray);
@@ -154,12 +188,9 @@ int main(int argc, char *argv[])
     struct scene scene;
     scene_init(&scene);
 
-    if (load_obj(&scene, argv[1]))
-        return 41;
-
     // initialize the frame buffer (the buffer that will store the result of the
     // rendering)
-    struct rgb_image *image = rgb_image_alloc(200, 200);
+    struct rgb_image *image = rgb_image_alloc(1000, 1000);
 
     // set all the pixels of the image to black
     struct rgb_pixel bg_color = {0};
@@ -168,7 +199,10 @@ int main(int argc, char *argv[])
     double aspect_ratio = (double)image->width / image->height;
 
     // build the scene
-    build_test_scene(&scene, aspect_ratio);
+    build_obj_scene(&scene, aspect_ratio);
+
+    if (load_obj(&scene, argv[1]))
+        return 41;
 
     // render all pixels
     for (size_t y = 0; y < image->height; y++)
