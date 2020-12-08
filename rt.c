@@ -8,12 +8,13 @@
 #include "bmp.h"
 #include "camera.h"
 #include "image.h"
+#include "normal_material.h"
+#include "obj_loader.h"
 #include "phong_material.h"
 #include "scene.h"
 #include "sphere.h"
 #include "triangle.h"
 #include "vec3.h"
-#include "obj_loader.h"
 
 /*
 ** The color of a light is encoded inside a float, from 0 to +inf,
@@ -126,12 +127,8 @@ static void build_obj_scene(struct scene *scene, double aspect_ratio)
     vec3_normalize(&scene->camera.up);
 }
 
-/* For all the pixels of the image, try to find the closest object
-** intersecting the camera ray. If an object is found, shade the pixel to
-** find its color.
-*/
-static void render_pixel(struct rgb_image *image, struct scene *scene, size_t x,
-                         size_t y)
+static struct ray image_cast_ray(const struct rgb_image *image,
+                                 const struct scene *scene, size_t x, size_t y)
 {
     // find the position of the current pixel in the image plane
     // camera_cast_ray takes camera relative positions, from -0.5 to 0.5 for
@@ -142,10 +139,15 @@ static void render_pixel(struct rgb_image *image, struct scene *scene, size_t x,
     // find the starting point and direction of this ray
     struct ray ray;
     camera_cast_ray(&ray, &scene->camera, cam_x, cam_y);
+    return ray;
+}
 
+static double
+scene_intersect_ray(struct object_intersection *closest_intersection,
+                    struct scene *scene, struct ray *ray)
+{
     // we will now try to find the closest object in the scene
     // intersecting this ray
-    struct object_intersection closest_intersection;
     double closest_intersection_dist = INFINITY;
 
     for (size_t i = 0; i < object_vect_size(&scene->objects); i++)
@@ -153,24 +155,36 @@ static void render_pixel(struct rgb_image *image, struct scene *scene, size_t x,
         struct object *obj = object_vect_get(&scene->objects, i);
         struct object_intersection intersection;
         // if there's no intersection between the ray and this object, skip it
-        double intersection_dist = obj->intersect(&intersection, obj, &ray);
+        double intersection_dist = obj->intersect(&intersection, obj, ray);
         if (intersection_dist >= closest_intersection_dist)
             continue;
 
         closest_intersection_dist = intersection_dist;
-        closest_intersection = intersection;
+        *closest_intersection = intersection;
     }
+
+    return closest_intersection_dist;
+}
+
+typedef void (*render_mode_f)(struct rgb_image *, struct scene *, size_t x,
+                              size_t y);
+
+/* For all the pixels of the image, try to find the closest object
+** intersecting the camera ray. If an object is found, shade the pixel to
+** find its color.
+*/
+static void render_shaded(struct rgb_image *image, struct scene *scene,
+                          size_t x, size_t y)
+{
+    struct ray ray = image_cast_ray(image, scene, x, y);
+
+    struct object_intersection closest_intersection;
+    double closest_intersection_dist
+        = scene_intersect_ray(&closest_intersection, scene, &ray);
 
     // if the intersection distance is infinite, do not shade the pixel
     if (isinf(closest_intersection_dist))
         return;
-
-    assert(closest_intersection_dist > 0);
-
-    /* double depth_repr = 1/(closest_intersection_dist + 1); */
-    /* uint8_t depth_intensity = translate_light_component(depth_repr); */
-    /* struct rgb_pixel pix_color = {depth_intensity, depth_intensity, depth_intensity}; */
-    /* rgb_image_set(image, x, y, pix_color); */
 
     struct material *mat = closest_intersection.material;
     struct vec3 pix_color
@@ -178,12 +192,61 @@ static void render_pixel(struct rgb_image *image, struct scene *scene, size_t x,
     rgb_image_set(image, x, y, rgb_color_from_light(&pix_color));
 }
 
+/* For all the pixels of the image, try to find the closest object
+** intersecting the camera ray. If an object is found, shade the pixel to
+** find its color.
+*/
+static void render_normals(struct rgb_image *image, struct scene *scene,
+                           size_t x, size_t y)
+{
+    struct ray ray = image_cast_ray(image, scene, x, y);
+
+    struct object_intersection closest_intersection;
+    double closest_intersection_dist
+        = scene_intersect_ray(&closest_intersection, scene, &ray);
+
+    // if the intersection distance is infinite, do not shade the pixel
+    if (isinf(closest_intersection_dist))
+        return;
+
+    struct material *mat = closest_intersection.material;
+    struct vec3 pix_color = normal_material.shade(
+        mat, &closest_intersection.location, scene, &ray);
+    rgb_image_set(image, x, y, rgb_color_from_light(&pix_color));
+}
+
+/* For all the pixels of the image, try to find the closest object
+** intersecting the camera ray. If an object is found, shade the pixel to
+** find its color.
+*/
+static void render_distances(struct rgb_image *image, struct scene *scene,
+                             size_t x, size_t y)
+{
+    struct ray ray = image_cast_ray(image, scene, x, y);
+
+    struct object_intersection closest_intersection;
+    double closest_intersection_dist
+        = scene_intersect_ray(&closest_intersection, scene, &ray);
+
+    // if the intersection distance is infinite, do not shade the pixel
+    if (isinf(closest_intersection_dist))
+        return;
+
+    assert(closest_intersection_dist > 0);
+
+    double depth_repr = 1 / (closest_intersection_dist + 1);
+    uint8_t depth_intensity = translate_light_component(depth_repr);
+    struct rgb_pixel pix_color
+        = {depth_intensity, depth_intensity, depth_intensity};
+    rgb_image_set(image, x, y, pix_color);
+}
+
 int main(int argc, char *argv[])
 {
     int rc;
 
-    if (argc != 3)
-        errx(1, "Usage: SCENE.obj OUTPUT.bmp");
+    if (argc < 3)
+        errx(1, "Usage: SCENE.obj OUTPUT.bmp [--normals] [--distances]");
 
     struct scene scene;
     scene_init(&scene);
@@ -204,10 +267,20 @@ int main(int argc, char *argv[])
     if (load_obj(&scene, argv[1]))
         return 41;
 
+    // parse options
+    render_mode_f renderer = render_shaded;
+    for (int i = 3; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--normals") == 0)
+            renderer = render_normals;
+        else if (strcmp(argv[i], "--distances") == 0)
+            renderer = render_distances;
+    }
+
     // render all pixels
     for (size_t y = 0; y < image->height; y++)
         for (size_t x = 0; x < image->width; x++)
-            render_pixel(image, &scene, x, y);
+            renderer(image, &scene, x, y);
 
     // write the rendered image to a bmp file
     FILE *fp = fopen(argv[2], "w");
