@@ -13,6 +13,7 @@
 #include "sphere.h"
 #include "triangle.h"
 #include "vec3.h"
+#include "obj_loader.h"
 
 struct rgb_pixel normal_color(const struct vec3 *normal)
 {
@@ -63,57 +64,57 @@ struct rgb_pixel rgb_color_from_light(const struct vec3 *light)
 
 static void build_test_scene(struct scene *scene, double aspect_ratio)
 {
-    // create a sample red material
-    struct phong_material *red_material = zalloc(sizeof(*red_material));
-    phong_material_init(red_material);
-    red_material->surface_color = (struct vec3){0.75, 0.125, 0.125};
-    red_material->diffuse_Kn = 0.2;
-    red_material->spec_n = 10;
-    red_material->spec_Ks = 0.2;
-    red_material->ambient_intensity = 0.1;
+    /* // create a sample red material */
+    /* struct phong_material *red_material = zalloc(sizeof(*red_material)); */
+    /* phong_material_init(red_material); */
+    /* red_material->surface_color = (struct vec3){0.75, 0.125, 0.125}; */
+    /* red_material->diffuse_Kn = 0.2; */
+    /* red_material->spec_n = 10; */
+    /* red_material->spec_Ks = 0.2; */
+    /* red_material->ambient_intensity = 0.1; */
 
-    // create a single sphere with the above material, and add it to the scene
-    struct sphere *sample_sphere
-        = sphere_create((struct vec3){0, 10, 0}, 4, &red_material->base);
-    object_vect_push(&scene->objects, &sample_sphere->base);
+    /* // create a single sphere with the above material, and add it to the scene */
+    /* struct sphere *sample_sphere */
+    /*     = sphere_create((struct vec3){0, 10, 0}, 4, &red_material->base); */
+    /* object_vect_push(&scene->objects, &sample_sphere->base); */
 
-    // go the same with a triangle
-    // points are listed counter-clockwise
-    //     a
-    //    /|
-    //   / |
-    //  b--c
-    struct vec3 points[3] = {
-        {6, 10, 1}, // a
-        {5, 10, 0}, // b
-        {6, 10, 0}, // c
-    };
+    /* // go the same with a triangle */
+    /* // points are listed counter-clockwise */
+    /* //     a */
+    /* //    /| */
+    /* //   / | */
+    /* //  b--c */
+    /* struct vec3 points[3] = { */
+    /*     {6, 10, 1}, // a */
+    /*     {5, 10, 0}, // b */
+    /*     {6, 10, 0}, // c */
+    /* }; */
 
-    struct triangle *sample_triangle
-        = triangle_create(points, &red_material->base);
-    object_vect_push(&scene->objects, &sample_triangle->base);
+    /* struct triangle *sample_triangle */
+    /*     = triangle_create(points, &red_material->base); */
+    /* object_vect_push(&scene->objects, &sample_triangle->base); */
 
     // setup the scene lighting
     scene->light_intensity = 5;
     scene->light_color = (struct vec3){1, 1, 0}; // yellow
-    scene->light_direction = (struct vec3){-1, 1, -1};
+    scene->light_direction = (struct vec3){-0.5, 0, -1};
     vec3_normalize(&scene->light_direction);
 
     // setup the camera
-    double cam_width = 10;
+    double cam_width = 2;
     double cam_height = cam_width / aspect_ratio;
 
     scene->camera = (struct camera){
-        .center = {0, 0, 0},
-        .forward = {0, 1, 0},
-        .up = {0, 0, 1},
+        .center = {0, 0, 1},
+        .forward = {0, 0, -1},
+        .up = {0, 1, 0},
         .width = cam_width,
         .height = cam_height,
         .focal_distance = focal_distance_from_fov(cam_width, 80),
     };
 
-    // release the reference to the material
-    material_put(&red_material->base);
+    /* // release the reference to the material */
+    /* material_put(&red_material->base); */
 }
 
 /* For all the pixels of the image, try to find the closest object
@@ -165,12 +166,18 @@ int main(int argc, char *argv[])
 {
     int rc;
 
-    if (argc != 2)
-        errx(1, "Usage: OUTPUT.bmp");
+    if (argc != 3)
+        errx(1, "Usage: SCENE.obj OUTPUT.bmp");
+
+    struct scene scene;
+    scene_init(&scene);
+
+    if (load_obj(&scene, argv[1]))
+        return 41;
 
     // initialize the frame buffer (the buffer that will store the result of the
     // rendering)
-    struct rgb_image *image = rgb_image_alloc(1920, 1080);
+    struct rgb_image *image = rgb_image_alloc(200, 200);
 
     // set all the pixels of the image to black
     struct rgb_pixel bg_color = {0};
@@ -179,8 +186,6 @@ int main(int argc, char *argv[])
     double aspect_ratio = (double)image->width / image->height;
 
     // build the scene
-    struct scene scene;
-    scene_init(&scene);
     build_test_scene(&scene, aspect_ratio);
 
     // render all pixels
@@ -189,7 +194,7 @@ int main(int argc, char *argv[])
             render_pixel(image, &scene, x, y);
 
     // write the rendered image to a bmp file
-    FILE *fp = fopen(argv[1], "w");
+    FILE *fp = fopen(argv[2], "w");
     if (fp == NULL)
         err(1, "failed to open the output file");
 
