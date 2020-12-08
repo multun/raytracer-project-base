@@ -69,6 +69,7 @@ double object_triangle_ray_intersect(struct object_intersection *inter,
     // if P is on the right side of the triangle's edges,
     // it is inside the triangle, and there is an intersection
     inter->material = trian->material;
+    vec3_normalize(&n);
     inter->location.normal = n;
     inter->location.point = P;
     return t;
