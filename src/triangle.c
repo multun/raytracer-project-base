@@ -1,8 +1,11 @@
 #include "triangle.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+
+#define INTER_EPSILON 0.0000001
 
 double object_triangle_ray_intersect(struct object_intersection *inter,
                                      const struct object *obj,
@@ -42,6 +45,8 @@ double object_triangle_ray_intersect(struct object_intersection *inter,
     // (aka the fourth plane equation component)
     double D = -vec3_dot(&n, v0);
     double t = -(vec3_dot(&n, &ray->source) + D) / vec3_dot(&n, &ray->direction);
+    if (t < 0)
+        return INFINITY;
 
     // P = O + t * dir
     struct vec3 P_off = vec3_mul(&ray->direction, t);
@@ -51,18 +56,17 @@ double object_triangle_ray_intersect(struct object_intersection *inter,
 
     struct vec3 v0_to_p = vec3_sub(&P, v0);
     struct vec3 v0_cross = vec3_cross(&a, &v0_to_p);
-    if (vec3_dot(&v0_cross, &n) < 0)
+    if (vec3_dot(&v0_cross, &n) < -INTER_EPSILON)
         return INFINITY;
-
 
     struct vec3 v1_to_p = vec3_sub(&P, v1);
     struct vec3 v1_cross = vec3_cross(&b, &v1_to_p);
-    if (vec3_dot(&v1_cross, &n) < 0)
+    if (vec3_dot(&v1_cross, &n) < -INTER_EPSILON)
         return INFINITY;
 
     struct vec3 v2_to_p = vec3_sub(&P, v2);
     struct vec3 v2_cross = vec3_cross(&c, &v2_to_p);
-    if (vec3_dot(&v2_cross, &n) < 0)
+    if (vec3_dot(&v2_cross, &n) < -INTER_EPSILON)
         return INFINITY;
 
 
