@@ -14,6 +14,10 @@ debug: CFLAGS += -O0 -g3 -fsanitize=address
 debug: LDLIBS += -fsanitize=address
 debug: all
 
+release: CFLAGS += -flto -O3
+release: LDLIBS += -flto
+release: all
+
 -include $(DEPS)
 
 clean:
