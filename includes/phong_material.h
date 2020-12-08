@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vec3.h"
 #include "object.h"
+#include "vec3.h"
 
 #include <stddef.h>
 

@@ -13,7 +13,6 @@
 */
 void evect_push_string(struct evect *vect, const char *str);
 
-
 /* add a temporary nul byte (not accounted in size) */
 static inline void evect_finalize(struct evect *vect)
 {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "vec3.h"
 #include "object.h"
 #include "utils/alloc.h"
+#include "vec3.h"
 
 #include <stddef.h>
 
@@ -17,15 +17,14 @@ struct triangle
     struct material *material;
 };
 
-
 double object_triangle_ray_intersect(struct object_intersection *inter,
                                      const struct object *obj,
                                      const struct ray *ray);
 
 void triangle_free(struct object *obj);
 
-
-static inline struct triangle *triangle_create(struct vec3 points[3], struct material *mat)
+static inline struct triangle *triangle_create(struct vec3 points[3],
+                                               struct material *mat)
 {
     struct triangle *trian = zalloc(sizeof(*trian));
     object_init(&trian->base, object_triangle_ray_intersect, triangle_free);

@@ -22,7 +22,10 @@ struct refcnt
     refcnt_free_f free;
 };
 
-#define REFCNT_STATIC_INIT { .count = 1, .free = ref_nofree }
+#define REFCNT_STATIC_INIT                                                     \
+    {                                                                          \
+        .count = 1, .free = ref_nofree                                         \
+    }
 
 void ref_nofree(struct refcnt *refcnt);
 

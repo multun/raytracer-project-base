@@ -1,7 +1,7 @@
 #pragma once
 
-#include "object.h"
 #include "camera.h"
+#include "object.h"
 
 #include "utils/pvect.h"
 
@@ -30,7 +30,6 @@ struct scene
 
     struct camera camera;
 };
-
 
 static inline void scene_init(struct scene *scene)
 {

@@ -1,6 +1,6 @@
+#include "gvect_common.h"
 #include <assert.h>
 #include <stddef.h>
-#include "gvect_common.h"
 
 #ifndef GVECT_NAME
 #error undefined GVECT_NAME in generic vector
@@ -61,7 +61,8 @@ static inline size_t GVECT_FNAME(size)(struct GVECT_NAME *vect)
     return vect->size;
 }
 
-static inline void GVECT_FNAME(steal)(struct GVECT_NAME *vect, struct GVECT_NAME *dest)
+static inline void GVECT_FNAME(steal)(struct GVECT_NAME *vect,
+                                      struct GVECT_NAME *dest)
 {
     *dest = *vect;
     vect->data = NULL;

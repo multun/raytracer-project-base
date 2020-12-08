@@ -1,16 +1,15 @@
-#include "scene.h"
-#include "utils/evect.h"
-#include "utils/alloc.h"
-#include "phong_material.h"
 #include "normal_material.h"
+#include "phong_material.h"
+#include "scene.h"
 #include "triangle.h"
+#include "utils/alloc.h"
+#include "utils/evect.h"
 
-#include <libgen.h>
 #include <err.h>
+#include <libgen.h>
 
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include "tinyobj_loader_c.h"
-
 
 static char *read_file(size_t *file_size, const char *path)
 {
@@ -25,7 +24,7 @@ static char *read_file(size_t *file_size, const char *path)
     evect_init(&res_buf, 4000);
 
     int c;
-    while((c = getc(fp)) != EOF)
+    while ((c = getc(fp)) != EOF)
         evect_push(&res_buf, c);
 
     fclose(fp);
@@ -34,11 +33,8 @@ static char *read_file(size_t *file_size, const char *path)
     return evect_data(&res_buf);
 }
 
-
-static void get_file_data(const char* filename,
-                          const int is_mtl,
-                          const char *obj_filename,
-                          char **data,
+static void get_file_data(const char *filename, const int is_mtl,
+                          const char *obj_filename, char **data,
                           size_t *data_len)
 {
     if (!filename)
@@ -49,7 +45,7 @@ static void get_file_data(const char* filename,
         return;
     }
 
-    const char* ext = strrchr(filename, '.');
+    const char *ext = strrchr(filename, '.');
 
     if (strcmp(ext, ".gz") == 0)
         abort();
@@ -59,7 +55,8 @@ static void get_file_data(const char* filename,
     char tmp[1024];
     tmp[0] = '\0';
 
-    /* For .mtl, extract base directory path from .obj filename and append .mtl filename */
+    /* For .mtl, extract base directory path from .obj filename and append .mtl
+     * filename */
     if (is_mtl && obj_filename)
     {
         basedirname_buf = strdup(obj_filename);
@@ -79,7 +76,6 @@ static void get_file_data(const char* filename,
     *data = read_file(data_len, tmp);
 }
 
-
 #include "utils/pvect.h"
 
 #define GVECT_NAME phong_material_vect
@@ -88,21 +84,19 @@ static void get_file_data(const char* filename,
 #undef GVECT_NAME
 #undef GVECT_TYPE
 
-
-
 int load_obj(struct scene *scene, const char *filename)
 {
     tinyobj_attrib_t attrib;
-    tinyobj_shape_t* shapes = NULL;
+    tinyobj_shape_t *shapes = NULL;
     size_t num_shapes;
-    tinyobj_material_t* materials = NULL;
+    tinyobj_material_t *materials = NULL;
     size_t num_materials;
 
     int rc;
     unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
 
     rc = tinyobj_parse_obj(&attrib, &shapes, &num_shapes, &materials,
-                                &num_materials, filename, get_file_data, flags);
+                           &num_materials, filename, get_file_data, flags);
     if (rc != TINYOBJ_SUCCESS)
         return -1;
 
@@ -132,7 +126,8 @@ int load_obj(struct scene *scene, const char *filename)
     {
         assert(attrib.face_num_verts[face_i] == 3);
         int mat_id = attrib.material_ids[face_i];
-        struct phong_material *mat = phong_material_vect_get(&conv_materials, mat_id);
+        struct phong_material *mat
+            = phong_material_vect_get(&conv_materials, mat_id);
 
         size_t face_off = face_i * 3;
         struct vec3 points[3];
@@ -153,7 +148,8 @@ int load_obj(struct scene *scene, const char *filename)
     // release the reference counter of materials
     for (size_t i = 0; i < num_materials; i++)
     {
-        struct phong_material *mat = phong_material_vect_get(&conv_materials, i);
+        struct phong_material *mat
+            = phong_material_vect_get(&conv_materials, i);
         material_put(&mat->base);
     }
 

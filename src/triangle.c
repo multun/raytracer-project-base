@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 #define INTER_EPSILON 0.0000001
 
 double object_triangle_ray_intersect(struct object_intersection *inter,
@@ -37,14 +36,16 @@ double object_triangle_ray_intersect(struct object_intersection *inter,
     // compute the face's normal vector
     struct vec3 n = vec3_cross(&a, &b);
 
-    // if the normal and the ray direction have the same sign, then the triangle is facing the wrong way
+    // if the normal and the ray direction have the same sign, then the triangle
+    // is facing the wrong way
     if (vec3_dot(&ray->direction, &n) >= 0)
         return INFINITY;
 
     // compute the distance from the plane to (0, 0, 0)
     // (aka the fourth plane equation component)
     double D = -vec3_dot(&n, v0);
-    double t = -(vec3_dot(&n, &ray->source) + D) / vec3_dot(&n, &ray->direction);
+    double t
+        = -(vec3_dot(&n, &ray->source) + D) / vec3_dot(&n, &ray->direction);
     if (t < 0)
         return INFINITY;
 
@@ -68,7 +69,6 @@ double object_triangle_ray_intersect(struct object_intersection *inter,
     struct vec3 v2_cross = vec3_cross(&c, &v2_to_p);
     if (vec3_dot(&v2_cross, &n) < -INTER_EPSILON)
         return INFINITY;
-
 
     // if P is on the right side of the triangle's edges,
     // it is inside the triangle, and there is an intersection
