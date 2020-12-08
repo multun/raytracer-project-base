@@ -1,5 +1,5 @@
 LDLIBS = -lm
-OBJS = rt.o src/bmp.o src/image.o src/camera.o src/utils/pvect.o src/utils/alloc.o src/sphere.o src/phong.o src/utils/refcnt.o src/scene.o
+OBJS = rt.o src/bmp.o src/image.o src/camera.o src/utils/pvect.o src/utils/alloc.o src/sphere.o src/phong.o src/utils/refcnt.o src/scene.o src/triangle.o
 DEPS = $(OBJS:.o=.d)
 BIN = rt
 

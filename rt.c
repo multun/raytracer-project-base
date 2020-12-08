@@ -11,6 +11,7 @@
 #include "phong_material.h"
 #include "scene.h"
 #include "sphere.h"
+#include "triangle.h"
 #include "vec3.h"
 
 struct rgb_pixel normal_color(const struct vec3 *normal)
@@ -75,6 +76,22 @@ static void build_test_scene(struct scene *scene, double aspect_ratio)
     struct sphere *sample_sphere
         = sphere_create((struct vec3){0, 10, 0}, 4, &red_material->base);
     object_vect_push(&scene->objects, &sample_sphere->base);
+
+    // go the same with a triangle
+    // points are listed counter-clockwise
+    //     a
+    //    /|
+    //   / |
+    //  b--c
+    struct vec3 points[3] = {
+        {6, 10, 1}, // a
+        {5, 10, 0}, // b
+        {6, 10, 0}, // c
+    };
+
+    struct triangle *sample_triangle
+        = triangle_create(points, &red_material->base);
+    object_vect_push(&scene->objects, &sample_triangle->base);
 
     // setup the scene lighting
     scene->light_intensity = 5;
