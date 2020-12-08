@@ -96,7 +96,7 @@ static void build_test_scene(struct scene *scene, double aspect_ratio)
     // setup the scene lighting
     scene->light_intensity = 5;
     scene->light_color = (struct vec3){1, 1, 0}; // yellow
-    scene->light_direction = (struct vec3){-1, 1, 1};
+    scene->light_direction = (struct vec3){-1, 1, -1};
     vec3_normalize(&scene->light_direction);
 
     // setup the camera

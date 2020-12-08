@@ -86,8 +86,7 @@ int bmp_write(struct rgb_image *image, size_t pixel_density, FILE *file)
     for (size_t line_i = 0; line_i < image->height; line_i++)
     {
         // bmp images are written from the bottom up
-        size_t bmp_line_i = image->height - 1 - line_i;
-        struct rgb_pixel *line = &image->data[image->width * bmp_line_i];
+        struct rgb_pixel *line = &image->data[image->width * line_i];
         for (size_t col = 0; col < image->width; col++)
         {
             struct rgb_pixel *pixel = &line[col];
