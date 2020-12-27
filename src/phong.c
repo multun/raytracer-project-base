@@ -41,9 +41,8 @@ struct vec3 phong_metarial_shade(const struct material *base_material,
         specular_contribution = vec3_mul(&scene->light_color, spec_coeff);
     }
 
-    double ambient_intensity = 0.1;
     struct vec3 ambient_contribution
-        = vec3_mul(&mat->surface_color, ambient_intensity);
+        = vec3_mul(&mat->surface_color, mat->ambient_intensity);
 
     struct vec3 pix_color = {0};
     pix_color = vec3_add(&pix_color, &ambient_contribution);
