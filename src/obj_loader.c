@@ -153,6 +153,8 @@ int load_obj(struct scene *scene, const char *filename)
         material_put(&mat->base);
     }
 
+    phong_material_vect_destroy(&conv_materials);
+
     // free tinyobjloader internal structures
     tinyobj_attrib_free(&attrib);
     tinyobj_shapes_free(shapes, num_shapes);
