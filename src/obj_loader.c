@@ -1,3 +1,4 @@
+#include "color.h"
 #include "normal_material.h"
 #include "phong_material.h"
 #include "scene.h"
@@ -111,13 +112,10 @@ int load_obj(struct scene *scene, const char *filename)
         shape_material->diffuse_Kn = 0.2;
         shape_material->spec_n = 10;
         shape_material->spec_Ks = 0.2;
-        shape_material->ambient_intensity = 0.1;
-        struct vec3 surface_color = {
-            materials[i].diffuse[0],
-            materials[i].diffuse[1],
-            materials[i].diffuse[2],
-        };
-        shape_material->surface_color = surface_color;
+        shape_material->ambient_intensity = 0.01;
+        float *diff_color = materials[i].diffuse;
+        shape_material->surface_color = light_from_rgb_color(
+            diff_color[0] * 255, diff_color[1] * 255, diff_color[2] * 255);
         phong_material_vect_push(&conv_materials, shape_material);
     }
 

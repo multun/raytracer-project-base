@@ -25,9 +25,9 @@ static inline double focal_distance_from_fov(double width, double fov_deg)
 
 /*
 ** The camera is a physical object in its own right, positioned in space just
-** like any other. When casting a ray, the raytracer must express the coordinates
-** of the starting point of the ray, relative to the image plane defined by the
-** camera.
+** like any other. When casting a ray, the raytracer must express the
+** coordinates of the starting point of the ray, relative to the image plane
+** defined by the camera.
 **
 ** One way to do it is to define the bottom left corner of the image plane to be
 ** at (-0.5, 0.5), its center to be at (0, 0), and its top right corner to be at

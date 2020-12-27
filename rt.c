@@ -15,42 +15,15 @@
 #include "sphere.h"
 #include "triangle.h"
 #include "vec3.h"
+#include "color.h"
 
-/*
-** The color of a light is encoded inside a float, from 0 to +inf,
-** where 0 is no light, and +inf a lot more light. Unfortunately,
-** regular images can't hold such a huge range, and each color channel
-** is usualy limited to [0,255]. This function does the (lossy) translation
-** by mapping the float [0,1] range to [0,255]
-*/
-static inline uint8_t translate_light_component(double light_comp)
-{
-    if (light_comp < 0.)
-        light_comp = 0.;
-    if (light_comp > 1.)
-        light_comp = 1.;
-
-    return light_comp * 255;
-}
-
-/*
-** Converts an rgb floating point light color to 24 bit rgb.
-*/
-struct rgb_pixel rgb_color_from_light(const struct vec3 *light)
-{
-    struct rgb_pixel res;
-    res.r = translate_light_component(light->x);
-    res.g = translate_light_component(light->y);
-    res.b = translate_light_component(light->z);
-    return res;
-}
 
 static void build_test_scene(struct scene *scene, double aspect_ratio)
 {
     // create a sample red material
     struct phong_material *red_material = zalloc(sizeof(*red_material));
     phong_material_init(red_material);
-    red_material->surface_color = (struct vec3){0.75, 0.125, 0.125};
+    red_material->surface_color = light_from_rgb_color(191, 32, 32);
     red_material->diffuse_Kn = 0.2;
     red_material->spec_n = 10;
     red_material->spec_Ks = 0.2;
@@ -79,7 +52,7 @@ static void build_test_scene(struct scene *scene, double aspect_ratio)
 
     // setup the scene lighting
     scene->light_intensity = 5;
-    scene->light_color = (struct vec3){1, 1, 0}; // yellow
+    scene->light_color = light_from_rgb_color(255, 255, 0); // yellow
     scene->light_direction = (struct vec3){-1, 1, -1};
     vec3_normalize(&scene->light_direction);
 
@@ -104,7 +77,7 @@ static void build_obj_scene(struct scene *scene, double aspect_ratio)
 {
     // setup the scene lighting
     scene->light_intensity = 5;
-    scene->light_color = (struct vec3){1, 1, 0}; // yellow
+    scene->light_color = light_from_rgb_color(255, 255, 0); // yellow
     scene->light_direction = (struct vec3){-1, -1, -1};
     vec3_normalize(&scene->light_direction);
 
@@ -234,8 +207,10 @@ static void render_distances(struct rgb_image *image, struct scene *scene,
 
     assert(closest_intersection_dist > 0);
 
+    // distance from 0 to +inf
+    // we want something from 0 to 1
     double depth_repr = 1 / (closest_intersection_dist + 1);
-    uint8_t depth_intensity = translate_light_component(depth_repr);
+    uint8_t depth_intensity = depth_repr * 255;
     struct rgb_pixel pix_color
         = {depth_intensity, depth_intensity, depth_intensity};
     rgb_image_set(image, x, y, pix_color);
